@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MyKMS - Knowledge Management System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left sidebar for note navigation -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Notes</h2>
+                <div class="header-buttons">
+                    <button id="newFolderBtn" class="icon-button" title="Create new folder">
+                        <i class="fas fa-folder-plus"></i>
+                    </button>
+                    <button id="newNoteBtn" class="icon-button" title="Create new note">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="searchNotes" placeholder="Search notes...">
+            </div>
+            <div id="notesTree" class="notes-tree">
+                <!-- Notes and folders will be dynamically inserted here -->
+            </div>
+            <div class="sidebar-footer">
+                <button id="syncGithubBtn" class="icon-button" title="Sync with GitHub">
+                    <i class="fab fa-github"></i>
+                </button>
+                <button id="settingsBtn" class="icon-button" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main content area with editor and preview -->
+        <div class="main-content">
+            <!-- Editor column -->
+            <div id="editor" class="editor"></div>
+            
+            <!-- Preview column -->
+            <div id="preview" class="preview markdown-body"></div>
+        </div>
+
+        <!-- Settings modal -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <h2>Settings</h2>
+                <div class="settings-section">
+                    <h3>Theme</h3>
+                    <div class="setting-item">
+                        <label for="fontFamily">Font Family:</label>
+                        <select id="fontFamily">
+                            <option value="Inter, sans-serif">Inter</option>
+                            <option value="'SF Pro Display', -apple-system, sans-serif">SF Pro Display</option>
+                            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="fontSize">Font Size:</label>
+                        <input type="number" id="fontSize" min="12" max="24" value="14">
+                    </div>
+                    <div class="setting-item">
+                        <label for="backgroundColor">Background Color:</label>
+                        <input type="color" id="backgroundColor" value="#faf6f1">
+                    </div>
+                    <div class="setting-item">
+                        <label for="textColor">Text Color:</label>
+                        <input type="color" id="textColor" value="#333333">
+                    </div>
+                    <div class="setting-item">
+                        <label for="accentColor">Accent Color:</label>
+                        <input type="color" id="accentColor" value="#00c805">
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>GitHub Integration</h3>
+                    <div class="setting-item">
+                        <label for="githubToken">GitHub Token:</label>
+                        <input type="password" id="githubToken" placeholder="Enter your GitHub token">
+                    </div>
+                    <div class="setting-item">
+                        <label for="repoName">Repository Name:</label>
+                        <input type="text" id="repoName" placeholder="username/repository">
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button id="saveSettings">Save Settings</button>
+                    <button id="closeSettings">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Folder Modal -->
+        <div id="newFolderModal" class="modal">
+            <div class="modal-content">
+                <h2>Create New Folder</h2>
+                <div class="setting-item">
+                    <label for="folderName">Folder Name:</label>
+                    <input type="text" id="folderName" placeholder="Enter folder name">
+                </div>
+                <div class="modal-buttons">
+                    <button id="createFolder">Create</button>
+                    <button id="cancelFolder">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Initialize marked with options before loading renderer.js
+        marked.use({
+            mangle: false,
+            headerIds: false,
+            breaks: true,
+            gfm: true
+        });
+    </script>
+    <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>

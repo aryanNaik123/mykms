@@ -1,0 +1,139 @@
+/* ... (previous styles remain the same until folder styles) ... */
+
+.folder-item {
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.folder-item.drag-over {
+    background-color: rgba(0, 200, 5, 0.1);
+    border: 2px dashed var(--accent-color);
+}
+
+.folder-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #333;
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.folder-header:hover {
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+.folder-header.active {
+    background-color: rgba(0, 200, 5, 0.1);
+    border-left: 3px solid var(--accent-color);
+}
+
+.folder-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.folder-toggle {
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: transform 0.2s ease;
+}
+
+.folder-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.folder-header:hover .folder-actions {
+    opacity: 1;
+}
+
+.folder-content {
+    margin-left: 1.5rem;
+    padding: 0.5rem;
+    border-left: 1px dashed rgba(0, 0, 0, 0.1);
+    min-height: 2rem;
+    transition: all 0.2s ease;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.folder-content.expanded {
+    max-height: none;
+}
+
+.note-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #333;
+    background-color: rgba(255, 255, 255, 0.8);
+    user-select: none;
+    position: relative;
+}
+
+.note-item:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.note-item.active {
+    background-color: rgba(0, 200, 5, 0.1);
+    border-left: 3px solid var(--accent-color);
+}
+
+.note-item.dragging {
+    opacity: 0.5;
+    background-color: rgba(0, 200, 5, 0.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+}
+
+.note-title {
+    flex-grow: 1;
+    margin-right: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.note-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.note-item:hover .note-actions {
+    opacity: 1;
+}
+
+.delete-btn {
+    color: #dc3545;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    z-index: 1;
+}
+
+.delete-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* ... (rest of the styles remain the same) ... */
