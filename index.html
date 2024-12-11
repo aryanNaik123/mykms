@@ -40,11 +40,15 @@
 
         <!-- Main content area with editor and preview -->
         <div class="main-content">
-            <!-- Editor column -->
-            <div id="editor" class="editor"></div>
+            <!-- Editor container -->
+            <div class="editor-container">
+                <textarea id="editor" class="editor" placeholder="Start writing here..."></textarea>
+            </div>
             
-            <!-- Preview column -->
-            <div id="preview" class="preview markdown-body"></div>
+            <!-- Preview container -->
+            <div class="preview-container">
+                <div id="preview" class="preview markdown-body"></div>
+            </div>
         </div>
 
         <!-- Settings modal -->
@@ -120,7 +124,6 @@
             gfm: true
         });
     </script>
-    <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>
