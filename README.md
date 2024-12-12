@@ -61,7 +61,6 @@ npm start
 ## Technologies Used
 
 - Electron
-- Monaco Editor
 - Marked (for Markdown rendering)
 - Font Awesome (for icons)
 

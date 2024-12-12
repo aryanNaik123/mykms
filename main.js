@@ -1,30 +1,43 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
+const { Octokit } = require('@octokit/rest');
 
 console.log('Starting application...');
 
-// Enable electron-store migrations
+// Configure electron store
 Store.initRenderer();
 
-// Initialize store with schema
-console.log('Initializing electron-store...');
-const store = new Store();
-console.log('Electron-store initialized');
+const store = new Store({
+    name: 'mykms-data',
+    fileExtension: 'json',
+    clearInvalidConfig: true,
+    defaults: {
+        theme: {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            backgroundColor: '#faf6f1',
+            textColor: '#333333',
+            accentColor: '#00c805'
+        },
+        notes: [],
+        folders: [],
+        'github.token': '',
+        'github.repo': '',
+        'github.lastSync': null
+    }
+});
 
-// Set default theme if not exists
-if (!store.has('theme')) {
-    console.log('Setting default theme...');
-    store.set('theme', {
-        fontFamily: 'Inter, sans-serif',
-        fontSize: '14px',
-        backgroundColor: '#faf6f1',
-        textColor: '#333333',
-        accentColor: '#00c805'
-    });
-}
+console.log('Store initialized with path:', store.path);
 
 let mainWindow = null;
+let octokit = null;
+
+// Initialize GitHub client if token exists
+const token = store.get('github.token');
+if (token) {
+    octokit = new Octokit({ auth: token });
+}
 
 function createWindow() {
     try {
@@ -36,7 +49,7 @@ function createWindow() {
             minWidth: 1200,
             minHeight: 800,
             webPreferences: {
-                nodeIntegration: true,
+                nodeIntegration: false,
                 contextIsolation: true,
                 preload: path.join(__dirname, 'preload.js')
             },
@@ -48,7 +61,9 @@ function createWindow() {
         mainWindow.loadFile('index.html');
 
         // Open DevTools in development
-        mainWindow.webContents.openDevTools();
+        if (process.env.NODE_ENV === 'development') {
+            mainWindow.webContents.openDevTools();
+        }
 
         // Handle window close
         mainWindow.on('closed', () => {
@@ -248,21 +263,112 @@ ipcMain.handle('move-note', (event, { noteId, folderId }) => {
 });
 
 // Handle GitHub integration
-ipcMain.handle('github-auth', (event, token) => {
+ipcMain.handle('github-auth', async (event, { token, repo }) => {
     try {
-        console.log('Setting GitHub token...');
+        console.log('Setting up GitHub integration...');
+        
+        // Validate token by making a test API call
+        const testOctokit = new Octokit({ auth: token });
+        await testOctokit.users.getAuthenticated();
+        
+        // Store token and repo info
         store.set('github.token', token);
+        store.set('github.repo', repo);
+        
+        // Initialize Octokit with new token
+        octokit = testOctokit;
+        
         return true;
     } catch (error) {
-        console.error('Error setting GitHub token:', error);
+        console.error('Error setting up GitHub:', error);
         return false;
+    }
+});
+
+ipcMain.handle('get-github-token', () => {
+    try {
+        return store.get('github.token', '');
+    } catch (error) {
+        console.error('Error getting GitHub token:', error);
+        return '';
+    }
+});
+
+ipcMain.handle('get-github-repo', () => {
+    try {
+        return store.get('github.repo', '');
+    } catch (error) {
+        console.error('Error getting GitHub repo:', error);
+        return '';
     }
 });
 
 ipcMain.handle('sync-to-github', async () => {
     try {
         console.log('Syncing to GitHub...');
-        // GitHub sync implementation would go here
+        
+        if (!octokit) {
+            throw new Error('GitHub not configured');
+        }
+        
+        const repo = store.get('github.repo');
+        if (!repo) {
+            throw new Error('GitHub repository not configured');
+        }
+        
+        const [owner, repoName] = repo.split('/');
+        
+        // Get current data
+        const notes = store.get('notes', []);
+        const folders = store.get('folders', []);
+        const lastSync = store.get('github.lastSync');
+        
+        // Create backup data
+        const backupData = {
+            notes,
+            folders,
+            lastSync: new Date().toISOString(),
+            version: '1.0.0'
+        };
+        
+        // Convert to base64
+        const content = Buffer.from(JSON.stringify(backupData, null, 2)).toString('base64');
+        
+        try {
+            // Try to get the file first
+            const { data: existingFile } = await octokit.repos.getContent({
+                owner,
+                repo: repoName,
+                path: 'mykms-backup.json'
+            });
+            
+            // Update existing file
+            await octokit.repos.createOrUpdateFileContents({
+                owner,
+                repo: repoName,
+                path: 'mykms-backup.json',
+                message: 'Update MyKMS backup',
+                content,
+                sha: existingFile.sha
+            });
+        } catch (error) {
+            if (error.status === 404) {
+                // File doesn't exist, create it
+                await octokit.repos.createOrUpdateFileContents({
+                    owner,
+                    repo: repoName,
+                    path: 'mykms-backup.json',
+                    message: 'Initial MyKMS backup',
+                    content
+                });
+            } else {
+                throw error;
+            }
+        }
+        
+        // Update last sync time
+        store.set('github.lastSync', backupData.lastSync);
+        
         return true;
     } catch (error) {
         console.error('Error syncing to GitHub:', error);

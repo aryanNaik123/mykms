@@ -1,8 +1,5 @@
-console.log('Starting renderer.js...');
-
 // Initialize editor
 const editor = document.getElementById('editor');
-console.log('Editor element:', editor);
 
 // Note and folder management
 let currentNote = null;
@@ -21,7 +18,6 @@ const renderer = {
 };
 
 marked.use({ renderer });
-console.log('Marked renderer configured');
 
 // Set up editor change listener
 editor.addEventListener('input', debounce(() => {
@@ -89,16 +85,12 @@ async function navigateToNote(noteName) {
 
 async function loadNotes() {
     try {
-        console.log('Loading notes...');
         notes = await window.electronAPI.getNotes();
         folders = await window.electronAPI.getFolders();
-        console.log('Notes loaded:', notes.length);
-        console.log('Folders loaded:', folders.length);
         renderNotesTree();
         
         // If there are no notes, create a welcome note
         if (notes.length === 0) {
-            console.log('Creating welcome note...');
             const welcomeNote = {
                 id: Date.now().toString(),
                 content: '# Welcome to MyKMS\n\nThis is your first note. You can:\n\n- Create new notes using the + button\n- Create folders using the folder+ button\n- Link to other notes using [[note name]] syntax\n- Click on links to navigate between notes\n- Use the search bar to find notes\n- Delete notes using the trash icon\n- Drag and drop notes into folders\n\nTry creating a new note and linking to it from here!',
@@ -174,7 +166,8 @@ function createFolderElement(folder) {
             <div class="folder-name">
                 <i class="fas fa-chevron-${isExpanded ? 'down' : 'right'} folder-toggle"></i>
                 <i class="fas fa-folder${isExpanded ? '-open' : ''}"></i>
-                ${folder.name}
+                <span class="folder-title">${folder.name}</span>
+                <input type="text" class="folder-rename-input" value="${folder.name}" style="display: none;">
             </div>
             <div class="folder-actions">
                 <button class="delete-btn" title="Delete folder">
@@ -182,6 +175,46 @@ function createFolderElement(folder) {
                 </button>
             </div>
         `;
+        
+        // Add double-click handler for renaming
+        const folderTitle = folderHeader.querySelector('.folder-title');
+        const renameInput = folderHeader.querySelector('.folder-rename-input');
+        
+        folderTitle.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            folderTitle.style.display = 'none';
+            renameInput.style.display = 'inline-block';
+            renameInput.focus();
+            renameInput.select();
+        });
+        
+        // Handle rename input
+        renameInput.addEventListener('keyup', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const newName = renameInput.value.trim();
+                if (newName && newName !== folder.name) {
+                    const updatedFolder = await window.electronAPI.renameFolder(folder.id, newName);
+                    if (updatedFolder) {
+                        Object.assign(folder, updatedFolder);
+                        folderTitle.textContent = newName;
+                    }
+                }
+                folderTitle.style.display = 'inline';
+                renameInput.style.display = 'none';
+            } else if (e.key === 'Escape') {
+                renameInput.value = folder.name;
+                folderTitle.style.display = 'inline';
+                renameInput.style.display = 'none';
+            }
+        });
+        
+        renameInput.addEventListener('blur', () => {
+            folderTitle.style.display = 'inline';
+            renameInput.style.display = 'none';
+            renameInput.value = folder.name;
+        });
         
         // Create folder content
         const folderContent = document.createElement('div');
@@ -526,7 +559,6 @@ let currentTheme = {};
 
 async function loadTheme() {
     try {
-        console.log('Loading theme...');
         currentTheme = await window.electronAPI.getTheme();
         applyTheme(currentTheme);
     } catch (error) {
@@ -565,13 +597,20 @@ closeSettings.addEventListener('click', () => {
     settingsModal.classList.remove('active');
 });
 
-function populateSettingsForm() {
+async function populateSettingsForm() {
     try {
+        // Load theme settings
         document.getElementById('fontFamily').value = currentTheme.fontFamily;
         document.getElementById('fontSize').value = parseInt(currentTheme.fontSize);
         document.getElementById('backgroundColor').value = currentTheme.backgroundColor;
         document.getElementById('textColor').value = currentTheme.textColor;
         document.getElementById('accentColor').value = currentTheme.accentColor;
+
+        // Load GitHub settings
+        const token = await window.electronAPI.getGithubToken();
+        const repo = await window.electronAPI.getGithubRepo();
+        document.getElementById('githubToken').value = token || '';
+        document.getElementById('repoName').value = repo || '';
     } catch (error) {
         console.error('Error populating settings form:', error);
     }
@@ -579,6 +618,7 @@ function populateSettingsForm() {
 
 saveSettings.addEventListener('click', async () => {
     try {
+        // Save theme settings
         const newTheme = {
             fontFamily: document.getElementById('fontFamily').value,
             fontSize: document.getElementById('fontSize').value + 'px',
@@ -591,35 +631,45 @@ saveSettings.addEventListener('click', async () => {
         if (success) {
             currentTheme = newTheme;
             applyTheme(newTheme);
-            settingsModal.classList.remove('active');
         }
+
+        // Save GitHub settings
+        const token = document.getElementById('githubToken').value.trim();
+        const repo = document.getElementById('repoName').value.trim();
+        
+        if (token && repo) {
+            if (!/^[^/]+\/[^/]+$/.test(repo)) {
+                alert('Repository should be in the format "username/repository"');
+                return;
+            }
+            await window.electronAPI.githubAuth(token, repo);
+        }
+
+        settingsModal.classList.remove('active');
     } catch (error) {
-        console.error('Error saving theme:', error);
+        console.error('Error saving settings:', error);
+        alert('Failed to save settings: ' + error.message);
     }
 });
 
 // GitHub sync
 document.getElementById('syncGithubBtn').addEventListener('click', async () => {
     try {
-        const token = document.getElementById('githubToken').value;
-        const repoName = document.getElementById('repoName').value;
+        const token = await window.electronAPI.getGithubToken();
+        const repo = await window.electronAPI.getGithubRepo();
         
-        if (!token || !repoName) {
+        if (!token || !repo) {
             alert('Please configure GitHub settings first');
             settingsModal.classList.add('active');
             return;
         }
-        
-        const authSuccess = await window.electronAPI.githubAuth(token);
-        if (authSuccess) {
-            const syncSuccess = await window.electronAPI.syncToGithub();
-            if (syncSuccess) {
-                alert('Successfully synced with GitHub!');
-            } else {
-                alert('Failed to sync with GitHub');
-            }
+
+        // Try to sync
+        const syncSuccess = await window.electronAPI.syncToGithub();
+        if (syncSuccess) {
+            alert('Successfully synced with GitHub!');
         } else {
-            alert('Failed to authenticate with GitHub');
+            alert('Failed to sync with GitHub. Please check the repository permissions and try again.');
         }
     } catch (error) {
         console.error('Error syncing with GitHub:', error);
@@ -643,10 +693,8 @@ function debounce(func, wait) {
 // Initialize app
 window.addEventListener('DOMContentLoaded', async () => {
     try {
-        console.log('Initializing app...');
         await loadTheme();
         await loadNotes();
-        console.log('App initialized successfully');
     } catch (error) {
         console.error('Error initializing app:', error);
     }
